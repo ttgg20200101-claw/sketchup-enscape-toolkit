@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>工装资产库</title>
+<style>
+  :root { --bg:#f6f6f4; --card:#fff; --line:#e2e1dc; --text:#222; --muted:#777; --accent:#2f6f5e; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:13px/1.5 "Microsoft YaHei","PingFang SC",sans-serif; background:var(--bg); color:var(--text); }
+  header { position:sticky; top:0; background:var(--bg); padding:12px 16px; border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:center; }
+  #q { flex:1; padding:7px 10px; border:1px solid var(--line); border-radius:6px; font:inherit; }
+  select { padding:6px; border:1px solid var(--line); border-radius:6px; font:inherit; }
+  #count { color:var(--muted); white-space:nowrap; }
+  main { padding:16px; display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; overflow:hidden; display:flex; flex-direction:column; }
+  .thumb { height:130px; background:#ecebe7; display:flex; align-items:center; justify-content:center; color:var(--muted); }
+  .thumb img { max-width:100%; max-height:100%; }
+  .body { padding:8px 10px; flex:1; display:flex; flex-direction:column; gap:3px; }
+  .name { font-weight:600; word-break:break-all; }
+  .tags, .info, .path { color:var(--muted); font-size:12px; word-break:break-all; }
+  .src { font-size:11px; color:var(--accent); }
+  button { margin:0 10px 10px; padding:6px; border:0; border-radius:6px; background:var(--accent); color:#fff; font:inherit; cursor:pointer; }
+  .empty { padding:40px; color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <input id="q" placeholder="搜索名称、标签、来源、路径…" autofocus>
+  <select id="src"><option value="">全部</option><option>资产库</option><option>扫描</option></select>
+  <span id="count"></span>
+</header>
+<main id="list"></main>
+<script>
+  var ITEMS = [];
+  var LIMIT = 300;
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  function render(items) { ITEMS = items || []; draw(); }
+
+  function draw() {
+    var q = document.getElementById('q').value.trim().toLowerCase();
+    var src = document.getElementById('src').value;
+    var words = q ? q.split(/\s+/) : [];
+    var hits = ITEMS.filter(function (it) {
+      if (src && it.source !== src) return false;
+      var hay = (it.name + ' ' + it.tags + ' ' + it.path + ' ' + it.info).toLowerCase();
+      return words.every(function (w) { return hay.indexOf(w) >= 0; });
+    });
+    document.getElementById('count').textContent = hits.length + ' / ' + ITEMS.length;
+    var list = document.getElementById('list');
+    if (!hits.length) { list.innerHTML = '<div class="empty">没有匹配的资产</div>'; return; }
+    list.innerHTML = hits.slice(0, LIMIT).map(function (it, i) {
+      var thumb = it.thumb ? '<img src="' + esc(it.thumb) + '">' : '无缩略图';
+      return '<div class="card"><div class="thumb">' + thumb + '</div><div class="body">' +
+        '<div class="src">' + esc(it.source) + '</div>' +
+        '<div class="name">' + esc(it.name) + '</div>' +
+        (it.tags ? '<div class="tags">' + esc(it.tags) + '</div>' : '') +
+        '<div class="info">' + esc(it.info) + '</div>' +
+        '<div class="path">' + esc(it.path) + '</div>' +
+        '</div><button data-i="' + ITEMS.indexOf(it) + '">放入模型</button></div>';
+    }).join('') + (hits.length > LIMIT ? '<div class="empty">只显示前 ' + LIMIT + ' 个，请输入关键词缩小范围</div>' : '');
+  }
+
+  document.getElementById('q').addEventListener('input', draw);
+  document.getElementById('src').addEventListener('change', draw);
+  document.getElementById('list').addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (b) sketchup.place(ITEMS[+b.getAttribute('data-i')].path);
+  });
+  document.addEventListener('DOMContentLoaded', function () { sketchup.ready(); });
+</script>
+</body>
+</html>

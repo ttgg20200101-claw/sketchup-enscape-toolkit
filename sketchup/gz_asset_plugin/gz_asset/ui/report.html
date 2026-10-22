@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>工装资产</title>
+<style>
+  :root { --bg:#f6f6f4; --line:#e2e1dc; --text:#222; --muted:#777; --mod:#2f6f5e; --del:#a5402d; --add:#6d6a5f; }
+  * { box-sizing:border-box; }
+  body { margin:0; padding:16px 20px; font:13px/1.55 "Microsoft YaHei","PingFang SC",sans-serif; background:var(--bg); color:var(--text); }
+  h1 { font-size:16px; margin:0 0 6px; }
+  .sum { color:var(--muted); margin-bottom:14px; }
+  h2 { font-size:14px; margin:18px 0 8px; }
+  table { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--line); }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { background:#efeee9; font-weight:600; }
+  td.name { word-break:break-all; width:28%; }
+  .k-mod { color:var(--mod); } .k-del { color:var(--del); } .k-add { color:var(--add); }
+  ul { margin:0; padding-left:16px; }
+  .f { color:var(--muted); }
+  .arrow { color:var(--muted); padding:0 4px; }
+  .ok { padding:30px; text-align:center; color:var(--mod); font-size:15px; }
+</style>
+</head>
+<body>
+<h1 id="title"></h1>
+<div class="sum" id="sum"></div>
+<div id="out"></div>
+<script>
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+  function kindClass(k) { return k.indexOf('删除') >= 0 ? 'k-del' : (k.indexOf('新增') >= 0 ? 'k-add' : 'k-mod'); }
+
+  function table(rows) {
+    return '<table><tr><th>名称</th><th>状态</th><th>变化（快照 → 现在）</th></tr>' + rows.map(function (c) {
+      var items = (c.items || []).map(function (it) {
+        return '<li><span class="f">' + esc(it[0]) + '</span>：' + esc(it[1]) +
+               '<span class="arrow">→</span>' + esc(it[2]) + '</li>';
+      }).join('');
+      return '<tr><td class="name">' + esc(c.name) + '</td><td class="' + kindClass(c.kind) + '">' +
+             esc(c.kind) + '</td><td>' + (items ? '<ul>' + items + '</ul>' : '') + '</td></tr>';
+    }).join('') + '</table>';
+  }
+
+  function render(d) {
+    document.getElementById('title').textContent = d.title;
+    var ch = d.changes || [], sk = d.skipped || [];
+    if (!ch.length && !sk.length) {
+      document.getElementById('out').innerHTML = '<div class="ok">和快照完全一致，没有任何变化。</div>';
+      return;
+    }
+    var groups = {}, order = [];
+    ch.forEach(function (c) { if (!groups[c.scope]) { groups[c.scope] = []; order.push(c.scope); } groups[c.scope].push(c); });
+    document.getElementById('sum').textContent =
+      order.map(function (s) { return s + ' ' + groups[s].length + ' 项'; }).join('　·　');
+    var html = order.map(function (s) { return '<h2>' + esc(s) + '</h2>' + table(groups[s]); }).join('');
+    if (sk.length) html += '<h2>没能处理（实体已不存在）</h2>' + table(sk);
+    document.getElementById('out').innerHTML = html;
+  }
+
+  document.addEventListener('DOMContentLoaded', function () { sketchup.ready(); });
+</script>
+</body>
+</html>
